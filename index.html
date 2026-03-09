@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code 產生器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button#download {
+            background-color: #2196F3;
+        }
+        button#download:hover {
+            background-color: #0b7dda;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #qrcode {
+            text-align: center;
+            margin-top: 30px;
+            min-height: 200px;
+        }
+        .settings-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .settings-group .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .color-preview {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ddd;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        #qrcodeCanvas {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QR Code 產生器</h1>
+        
+        <div class="form-group">
+            <label for="qrData">QR Code 內容：</label>
+            <textarea id="qrData" placeholder="請輸入要轉換為 QR Code 的文字、網址或其他資料"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="fileName">檔案名稱：</label>
+            <input type="text" id="fileName" placeholder="請輸入檔案名稱（不需要副檔名）">
+        </div>
+        
+        <div class="form-group">
+            <label for="centerText">QR Code 中心文字：</label>
+            <input type="text" id="centerText" placeholder="請輸入要顯示在 QR Code 中間的文字（建議 4 個中文字以內）" maxlength="8">
+        </div>
+        
+        <div class="settings-group">
+            <div class="form-group">
+                <label for="qrSize">QR Code 大小：</label>
+                <input type="number" id="qrSize" value="256" min="100" max="1000" step="10">
+            </div>
+            
+            <div class="form-group">
+                <label for="qrColor">QR Code 顏色：</label>
+                <input type="color" id="qrColor" value="#000000">
+                <span class="color-preview" id="colorPreview" style="background-color: #000000;"></span>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="generate">產生 QR Code</button>
+            <button id="download" disabled>下載 PNG 圖片</button>
+        </div>
+        
+        <div id="qrcode"></div>
+    </div>
+
+    <script>
+        // 定義 QRCode 生成器
+        // QRCode 生成器的定義
+        let qrcode = null;
+        let qrCanvas = null;
+        
+        // 獲取元素引用
+        // 獲取頁面上的元素引用
+        const qrDataInput = document.getElementById('qrData');
+        const fileNameInput = document.getElementById('fileName');
+        const centerTextInput = document.getElementById('centerText');
+        const qrSizeInput = document.getElementById('qrSize');
+        const qrColorInput = document.getElementById('qrColor');
+        const colorPreview = document.getElementById('colorPreview');
+        const generateBtn = document.getElementById('generate');
+        const downloadBtn = document.getElementById('download');
+        const qrcodeDiv = document.getElementById('qrcode');
+        
+        // 顏色輸入變化時更新預覽
+        // 當顏色選擇器的值變化時，更新顏色預覽
+        qrColorInput.addEventListener('input', function() {
+            colorPreview.style.backgroundColor = this.value;
+        });
+        
+        // 生成 QR Code
+        // 生成 QR Code 的函數
+        generateBtn.addEventListener('click', function() {
+            const qrData = qrDataInput.value.trim();
+            if (!qrData) {
+                alert('請輸入 QR Code 內容！');
+                return;
+            }
+            
+            // 清除之前的 QR Code
+            qrcodeDiv.innerHTML = '';
+            
+            // 獲取設置
+            const size = parseInt(qrSizeInput.value) || 256;
+            const color = qrColorInput.value;
+            const centerText = centerTextInput.value.trim();
+            
+            // 創建新的 QR Code
+            qrcode = new QRCode(qrcodeDiv, {
+                text: qrData,
+                width: size,
+                height: size,
+                colorDark: color,
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // 啟用下載按鈕
+            setTimeout(() => {
+                downloadBtn.disabled = false;
+                
+                // 儲存 canvas 引用，用於下載
+                qrCanvas = qrcodeDiv.querySelector('canvas');
+                
+                // 如果有中心文字，提前在預覽中顯示
+                if (centerText) {
+                    const imgElement = qrcodeDiv.querySelector('img');
+                    if (imgElement) {
+                        const finalCanvas = drawCenterText(qrCanvas, centerText, color);
+                        const dataUrl = finalCanvas.toDataURL('image/png');
+                        imgElement.src = dataUrl;
+                        
+                        // 將原始 canvas 隱藏，因為我們將使用修改後的圖像
+                        qrCanvas.style.display = 'none';
+                    }
+                }
+            }, 100);
+        });
+        
+        // 在 QR Code 上繪製中心文字
+        // 在 QR Code 畫布上繪製中心文字的函數
+        function drawCenterText(canvas, text, color) {
+            if (!text) return canvas;
+            
+            // 創建一個新的畫布來合成 QR Code 和文字
+            const tempCanvas = document.createElement('canvas');
+            const size = canvas.width; // 假設 QR Code 是正方形
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            
+            const ctx = tempCanvas.getContext('2d');
+            
+            // 繪製原始 QR Code
+            ctx.drawImage(canvas, 0, 0, size, size);
+            
+            // 設置中心區域為白色背景（QR Code 中心區域約為整體的 1/5）
+            const centerSize = Math.floor(size * 0.28);
+            const centerPos = Math.floor((size - centerSize) / 2);
+            
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(centerPos, centerPos, centerSize, centerSize);
+            
+            // 添加文字
+            ctx.fillStyle = color || "#000000";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            
+            // 使用固定的字體大小 12px
+            const fontSize = 12;
+            
+            ctx.font = `bold ${fontSize}px 'Microsoft JhengHei', Arial, sans-serif`;
+            ctx.fillText(text, size / 2, size / 2);
+            
+            return tempCanvas;
+        }
+        
+        // 下載 QR Code 為 PNG
+        // 將 QR Code 下載為 PNG 檔案的函數
+        downloadBtn.addEventListener('click', function() {
+            if (!qrCanvas) return;
+            
+            let fileName = fileNameInput.value.trim();
+            if (!fileName) {
+                fileName = 'qrcode';
+            }
+            
+            // 確保檔名不包含非法字符
+            fileName = fileName.replace(/[^\w\u4e00-\u9fa5\-]/g, '_');
+            
+            // 獲取中心文字
+            const centerText = centerTextInput.value.trim();
+            
+            // 如果有中心文字，將其添加到 QR Code 上
+            let finalCanvas = qrCanvas;
+            if (centerText) {
+                finalCanvas = drawCenterText(qrCanvas, centerText, qrColorInput.value);
+            }
+            
+            // 創建臨時連結以下載圖片
+            const link = document.createElement('a');
+            link.download = fileName + '.png';
+            link.href = finalCanvas.toDataURL('image/png');
+            link.click();
+        });
+    </script>
+</body>
+</html>
